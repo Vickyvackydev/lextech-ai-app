@@ -1,0 +1,154 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+///home/josephhenry/Downloads/project/legal assitant/prisma/schema.prisma:
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+
+
+
+
+
+
+model User {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  email     String?   @unique
+  emailVerified   DateTime?
+  name      String?
+  firstName String?
+  lastName  String?
+  password  String?
+  settings  UserSettings?
+  chats     Chat[]
+  accounts  Account[]
+  files     File[] 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+
+
+
+model Account {
+  id                String  @id @default(auto()) @map("_id") @db.ObjectId
+  userId            String  @db.ObjectId
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.String
+  access_token      String? @db.String
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.String
+  session_state     String?
+ 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+ 
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+ 
+  @@unique([provider, providerAccountId])
+}
+ 
+// model Session {
+//   id           String   @id @default(auto()) @map("_id") @db.ObjectId
+//   sessionToken String   @unique
+//   userId       String   @db.ObjectId
+//   expires      DateTime
+//   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+ 
+//   createdAt DateTime @default(now())
+//   updatedAt DateTime @updatedAt
+// }
+ 
+model VerificationToken {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  email      String
+  token      String   @unique
+  expires    DateTime
+ 
+  @@unique([email, token])
+}
+
+
+model PasswordResetToken {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  email      String
+  token      String   @unique
+  expires    DateTime
+ 
+  @@unique([email, token])
+}
+ 
+
+model UserSettings {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String   @unique @db.ObjectId
+  user        User     @relation(fields: [userId], references: [id])
+  theme       String   @default("dark")
+  fontSize    String   @default("medium")
+  language    String   @default("en")
+  updatedAt   DateTime @updatedAt
+}
+
+model Chat {
+  id            String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId        String    @db.ObjectId
+  user          User      @relation(fields: [userId], references: [id])
+  title         String    @default("New Chat")
+  summary       String    @default("")  // Add this field
+  messages      Message[]
+  pinned        Boolean   @default(false)
+  files         File[]    // Files associated with this chat
+  lastMessageAt DateTime  @default(now())
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([userId, lastMessageAt])
+}
+
+model Message {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  chatId    String   @db.ObjectId
+  chat      Chat     @relation(fields: [chatId], references: [id])
+  content   String   @db.String
+  role      Role
+  fileIds   String[] @db.ObjectId  // References to files attached to this message
+  files     File[]   @relation(fields: [fileIds], references: [id])
+  createdAt DateTime @default(now())
+
+  @@index([chatId, createdAt])
+}
+
+model File {
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String    @db.ObjectId
+  user        User      @relation(fields: [userId], references: [id])
+  chatId      String?   @db.ObjectId  // Optional - file might not be associated with a chat
+  chat        Chat?     @relation(fields: [chatId], references: [id])
+  messages    Message[] @relation(fields: [messageIds], references: [id])
+  messageIds  String[]  @db.ObjectId
+  name        String
+  url         String    // Vercel Blob URL
+  content     String?
+  type        String    // MIME type
+  size        Int       // File size in bytes
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([chatId])
+}
+
+enum Role {
+  ASSISTANT
+  USER
+}
