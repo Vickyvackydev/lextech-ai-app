@@ -586,8 +586,8 @@ export function Chat({ isNewChat = false }: { isNewChat?: boolean }) {
                     <button
                       className={`group flex w-full text-[#6C7275] font-medium text-[15px] items-center gap-2 rounded-lg py-1.5 px-3  ${
                         darkmode
-                          ? "data-[focus]:bg-white/10 text-red-700"
-                          : "data-[focus]:bg-[#F3F5F7] text-[#6C7275]"
+                          ? "data-[focus]:bg-white/10 text-red-500"
+                          : "data-[focus]:bg-[#F3F5F7] text-red-500"
                       } `}
                     >
                       <Image
