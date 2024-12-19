@@ -14,6 +14,7 @@ export interface GlobalState {
   chatId: string | null;
   caption: boolean;
   settings: boolean;
+  captionPopUp: boolean;
 }
 
 const initialState: GlobalState = {
@@ -27,6 +28,7 @@ const initialState: GlobalState = {
   chatId: null,
   caption: false,
   settings: false,
+  captionPopUp: false,
 };
 
 export const GlobalSlice = createSlice({
@@ -60,6 +62,9 @@ export const GlobalSlice = createSlice({
     setLiveCaption: (state, action) => {
       state.caption = action.payload;
     },
+    setLiveCaptionPopUp: (state, action) => {
+      state.captionPopUp = action.payload;
+    },
     setSettings: (state, action) => {
       state.settings = action.payload;
     },
@@ -77,6 +82,7 @@ export const {
   setChatId,
   setLiveCaption,
   setSettings,
+  setLiveCaptionPopUp,
 } = GlobalSlice.actions;
 
 export const SelectOpenState = (state: RootState) => state.globalstate.open;
@@ -88,5 +94,7 @@ export const selectDarkmode = (state: RootState) => state.globalstate.darkMode;
 export const selectChat = (state: RootState) => state.globalstate.chats;
 export const selectChatId = (state: RootState) => state.globalstate.chatId;
 export const showCaption = (state: RootState) => state.globalstate.caption;
+export const showCaptionPopUp = (state: RootState) =>
+  state.globalstate.captionPopUp;
 export const showSettings = (state: RootState) => state.globalstate.settings;
 export const GlobalReducer = GlobalSlice.reducer;

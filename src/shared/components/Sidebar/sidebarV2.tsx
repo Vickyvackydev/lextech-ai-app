@@ -39,6 +39,7 @@ import toast from "react-hot-toast";
 import {
   selectDarkmode,
   setLiveCaption,
+  setLiveCaptionPopUp,
   setSettings,
 } from "@/states/slices/globalReducer";
 import { FaUser } from "react-icons/fa6";
@@ -157,7 +158,10 @@ const SidebarV2 = (props: SidebarProps) => {
             <Tooltip title="Start live caption">
               <div
                 className="w-[50px] h-[50px] rounded-full cursor-pointer items-center justify-center flex bg-white/20"
-                onClick={() => dispatch(setLiveCaption(true))}
+                onClick={() => {
+                  // dispatch(setLiveCaptionPopUp(true));
+                  dispatch(setLiveCaption(true));
+                }}
               >
                 {/* <Image src={RING} className="w-[24px] h-[24px]" alt="" /> */}
 

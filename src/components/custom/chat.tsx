@@ -1,6 +1,5 @@
 "use client";
 import { Attachment } from "ai";
-
 import { useState, useEffect, useRef, useCallback, ChangeEvent } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -11,7 +10,9 @@ import {
   setChatId,
   setChats,
   setLiveCaption,
+  setLiveCaptionPopUp,
   showCaption,
+  showCaptionPopUp,
 } from "@/states/slices/globalReducer";
 import { motion } from "framer-motion";
 import { shareChat } from "@/lib/actions/chat";
@@ -50,20 +51,12 @@ import { FaEllipsisH, FaFilePdf, FaImage, FaVolumeUp } from "react-icons/fa";
 import { FaCopy } from "react-icons/fa6";
 import { selectUser } from "@/states/slices/authReducer";
 import { getChats, SendMessage } from "@/services/chat/chat.service";
-
 import { useQuery } from "react-query";
-
 import { Tooltip } from "@mui/material";
-
-interface CustomResponse extends Response {
-  headers: Headers & {
-    get(name: "X-Chat-Id"): string | null;
-  };
-}
 
 export function Chat({ isNewChat = false }: { isNewChat?: boolean }) {
   const [attachments, setAttachments] = useState<Array<Attachment>>([]);
-  const [isVisible, setIsVisible] = useState(true);
+
   const user = useAppSelector(selectUser);
   const [listening, setListening] = useState(false);
   const [userStartedSpeaking, setUserStartedSpeaking] = useState(false);
@@ -92,6 +85,7 @@ export function Chat({ isNewChat = false }: { isNewChat?: boolean }) {
   const { data: chatMessages } = useQuery("chats", getChats);
   const darkmode = useAppSelector(selectDarkmode);
   const liveCaption = useAppSelector(showCaption);
+  const liveCaptionPopUp = useAppSelector(showCaptionPopUp);
   const { copyToClipboard } = useClipboard();
 
   const SpeechRecognition =
@@ -99,17 +93,18 @@ export function Chat({ isNewChat = false }: { isNewChat?: boolean }) {
     (window as any).webkitSpeechRecognition;
   const recognition = new SpeechRecognition();
   if (liveCaption) {
-    recognition.continuous = true;
+    recognition.continuous = false;
     recognition.interimResults = true;
   } else {
     recognition.continuous = false;
     recognition.interimResults = false;
   }
-
   recognition.lang = "en-US";
 
   const startListening = () => {
     setListening(true);
+    // if (!liveCaption || listening) return;
+
     setPlaceHolder("Speak now...");
     setTranscription("");
     recognition.start();
@@ -132,18 +127,27 @@ export function Chat({ isNewChat = false }: { isNewChat?: boolean }) {
       setUserStartedSpeaking(true);
       setPlaceHolder("Listening...");
     };
+    recognition.onspeechend = () => {
+      setListening(false);
+
+      recognition.stop();
+    };
 
     recognition.onerror = (event: any) => {
       console.error("Speech recognition error:", event.error);
       setListening(false);
+
       setUserStartedSpeaking(false);
-      setPlaceHolder("Type a message..."); // Reset placeholder on error
+      setPlaceHolder("Type a message...");
+      recognition.stop();
     };
 
     recognition.onend = () => {
       setListening(false);
       setUserStartedSpeaking(false);
+
       setPlaceHolder("Type a message...");
+      recognition.stop();
     };
   };
 
@@ -152,16 +156,13 @@ export function Chat({ isNewChat = false }: { isNewChat?: boolean }) {
     recognition.stop();
   };
   const handleStartChat = async () => {
-    setLoading(true);
     const formData = new FormData();
-
     formData.append("message", message);
-
     try {
       const response = await SendMessage(formData);
       if (response) {
         toast.success("Message sent wait for response");
-        router.replace(`/chat/${response?.data?.id}`);
+        window.history.replaceState({}, "", `/chat/${response?.data?.id}`);
         dispatch(setChatId(response?.data?.id));
         setMessage("");
       }
@@ -170,18 +171,18 @@ export function Chat({ isNewChat = false }: { isNewChat?: boolean }) {
       toast.error(error?.response?.data?.message);
     } finally {
       setLoading(false);
+      setListening(false);
+
+      setMessage("");
+      setCaptions("");
     }
   };
   const handleContinueChat = async () => {
-    setLoading(true);
     const formData = new FormData();
-
     formData.append("message", message);
-
     if (chatId) {
       formData.append("chat_id", chatId);
     }
-
     try {
       const response = await SendMessage(formData);
       if (response) {
@@ -193,10 +194,15 @@ export function Chat({ isNewChat = false }: { isNewChat?: boolean }) {
       toast.error(error?.response?.data?.message);
     } finally {
       setLoading(false);
+      setListening(false);
+
+      setMessage("");
+      setCaptions("");
     }
   };
 
   const handleSendMessage = async (e?: ChangeEvent) => {
+    setLoading(true);
     e?.preventDefault();
     if (chatId) {
       await handleContinueChat();
@@ -596,9 +602,6 @@ export function Chat({ isNewChat = false }: { isNewChat?: boolean }) {
                         alt=""
                       />
                       Delete
-                      {/* <kbd className="ml-auto hidden font-sans text-xs text-white/50 group-data-[focus]:inline">
-                        ⌘D
-                      </kbd> */}
                     </button>
                   </MenuItem>
                 </MenuItems>
@@ -848,7 +851,7 @@ export function Chat({ isNewChat = false }: { isNewChat?: boolean }) {
                   <Tooltip title="Attach files">
                     <Image
                       src={ADD_ICON}
-                      onClick={() => setFileSelector(true)}
+                      onClick={() => {}}
                       className="w-[28px] h-[28px] "
                       alt="Add Icon"
                     />
@@ -932,11 +935,13 @@ export function Chat({ isNewChat = false }: { isNewChat?: boolean }) {
                           <span className="w-1 h-4 bg-blue-500 animate-bounce delay-150 rounded-full"></span>
                         </div>
                       ) : (
-                        <Image
-                          src={SPEAKER}
-                          className={`w-[35px] h-[35px] `}
-                          alt="Sender Icon"
-                        />
+                        <div className="flex items-center justify-center hover:bg-white/10 rounded-full w-[45px] h-[45px]">
+                          <Image
+                            src={SPEAKER}
+                            className={`w-[35px] h-[35px] `}
+                            alt="Sender Icon"
+                          />
+                        </div>
                       )}
                     </button>
                   ) : (
@@ -976,7 +981,10 @@ export function Chat({ isNewChat = false }: { isNewChat?: boolean }) {
             </span>
           </p>
           <button
-            onClick={() => dispatch(setLiveCaption(false))}
+            onClick={() => {
+              dispatch(setLiveCaption(false));
+              setCaptions("");
+            }}
             className="text-gray-400 hover:text-white ml-4"
             aria-label="Close"
           >
